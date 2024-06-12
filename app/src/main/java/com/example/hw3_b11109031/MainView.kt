@@ -22,9 +22,6 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import java.io.File
 import kotlin.coroutines.CoroutineContext
-//import kotlin.coroutines.jvm.internal.CompletedContinuation.context
-
-//import kotlin.coroutines.jvm.internal.CompletedContinuation.context
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable

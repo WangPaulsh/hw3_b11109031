@@ -14,7 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
 @Composable
-fun PhotoPickerScreen(onPhotoSelected: (Uri) -> Unit) {
+fun PhotoPickerScreen(onPhotoSelected: (Uri) -> Unit, onBack: () -> Unit) {
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
         uri?.let { onPhotoSelected(it) }
     }
@@ -22,6 +22,10 @@ fun PhotoPickerScreen(onPhotoSelected: (Uri) -> Unit) {
     Column(modifier = Modifier.fillMaxSize()) {
         Button(onClick = { launcher.launch("image/*") }) {
             Text("Pick a Photo")
+        }
+
+        Button(onClick = onBack) {
+            Text("back")
         }
     }
 }

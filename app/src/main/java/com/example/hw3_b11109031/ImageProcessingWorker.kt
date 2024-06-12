@@ -13,35 +13,52 @@ import android.renderscript.ScriptIntrinsicBlur
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.example.hw3_b11109031.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
-class ImageProcessingWorker(appContext: Context, workerParams: WorkerParameters) :
-    CoroutineWorker(appContext, workerParams) {
-
-    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        val imageUri = inputData.getString("imageUri") ?: return@withContext Result.failure()
-        val context = applicationContext
-        val uri = Uri.parse(imageUri)
-
-        val inputStream = context.contentResolver.openInputStream(uri)
-        val originalBitmap = BitmapFactory.decodeStream(inputStream)
-        val bitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
-
-        val renderScript = RenderScript.create(context)
-        val input = Allocation.createFromBitmap(renderScript, bitmap)
-        val output = Allocation.createTyped(renderScript, input.type)
-        val script = ScriptIntrinsicBlur.create(renderScript, input.element)
-        script.setRadius(10f)
-        script.setInput(input)
-        script.forEach(output)
-        output.copyTo(bitmap)
-
-        renderScript.destroy()
-
-        // 在这里可以保存模糊处理后的图像或其他处理
-        return@withContext Result.success()
+class BlurWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
+    override suspend fun doWork(): Result {
+        val resourceUri = inputData.getString(MyViewModel.KEY_IMAGE_URI)
+        return try {
+            val resolver = applicationContext.contentResolver
+            val bitmap = uriToBitmap(applicationContext, Uri.parse(resourceUri))
+            val blurredBitmap = blurBitmap(bitmap, applicationContext)
+            val outputUri = saveBitmapToFile(applicationContext, blurredBitmap)
+            val outputData = workDataOf(MyViewModel.KEY_IMAGE_URI to outputUri.toString())
+            Result.success(outputData)
+        } catch (throwable: Throwable) {
+            Result.failure()
+        }
     }
+}
+fun uriToBitmap(context: Context, uri: Uri): Bitmap {
+    val inputStream = context.contentResolver.openInputStream(uri)
+    return BitmapFactory.decodeStream(inputStream)
+}
+
+fun blurBitmap(bitmap: Bitmap, context: Context): Bitmap {
+    val outputBitmap = Bitmap.createBitmap(bitmap)
+    val renderScript = RenderScript.create(context)
+    val input = Allocation.createFromBitmap(renderScript, bitmap)
+    val output = Allocation.createFromBitmap(renderScript, outputBitmap)
+    val script = ScriptIntrinsicBlur.create(renderScript, input.element)
+    script.setRadius(10f)
+    script.setInput(input)
+    script.forEach(output)
+    output.copyTo(outputBitmap)
+    return outputBitmap
+}
+
+fun saveBitmapToFile(context: Context, bitmap: Bitmap): Uri {
+    val file = File(context.cacheDir, "blurred_image.png")
+    val outputStream = FileOutputStream(file)
+    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+    outputStream.flush()
+    outputStream.close()
+    return Uri.fromFile(file)
 }

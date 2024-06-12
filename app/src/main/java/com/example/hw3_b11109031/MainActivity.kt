@@ -46,6 +46,9 @@ fun MyApp() {
                 onPhotoSelected = { uri ->
                     viewModel.setImageUri(uri)
                     navController.navigate("editPhoto")
+                },
+                onBack = {
+                    navController.navigate("main")
                 }
             )
         }
